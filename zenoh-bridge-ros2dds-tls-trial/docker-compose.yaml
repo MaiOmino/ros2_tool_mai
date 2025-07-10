@@ -1,0 +1,67 @@
+services:
+  ros2_node1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ros2_node1
+    restart: on-failure
+    cap_add:
+      - NET_ADMIN
+    networks:
+      ros2_net:
+        ipv4_address: 192.168.100.101
+    environment:
+      - ROS_DOMAIN_ID=1
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///root/mnt/cyclonedds_config.xml
+    volumes:
+      - ./mnt_1:/root/mnt
+    tty: true
+    command: ["zenoh-bridge-ros2dds", "-c", "/root/mnt/config_robot_1.json5"]
+
+  ros2_node2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ros2_node2
+    restart: on-failure
+    cap_add:
+      - NET_ADMIN
+    networks:
+      ros2_net:
+        ipv4_address: 192.168.100.102
+    environment:
+      - ROS_DOMAIN_ID=2
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///root/mnt/cyclonedds_config.xml
+    volumes:
+      - ./mnt_2:/root/mnt
+    tty: true
+    command: ["zenoh-bridge-ros2dds", "-c", "/root/mnt/config_robot_2.json5"]
+  
+  ros2_node3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ros2_node3
+    restart: on-failure
+    cap_add:
+      - NET_ADMIN
+    networks:
+      ros2_net:
+        ipv4_address: 192.168.100.10
+    environment:
+      - ROS_DOMAIN_ID=3
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///root/mnt/cyclonedds_config.xml
+    volumes:
+      - ./mnt_3:/root/mnt
+    tty: true
+    command: ["zenoh-bridge-ros2dds", "-c", "/root/mnt/config_server.json5"]
+
+networks:
+  ros2_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24

@@ -1,0 +1,15 @@
+services:
+  rosbag-recorder:
+    image: ros:humble
+    container_name: rosbag_recorder
+    volumes:
+      - ./rosbag:/ros2_ws/rosbags
+      - ./topics.txt:/ros2_ws/topics.txt
+    command: >
+      bash -c "
+      source /opt/ros/humble/setup.bash &&
+      mkdir -p /ros2_ws/rosbags &&
+      ros2 bag record $(cat /ros2_ws/topics.txt) -o /ros2_ws/bagfile
+      cp -r /ros2_ws/bagfile /ros2_ws/rosbags
+      "
+    network_mode: host

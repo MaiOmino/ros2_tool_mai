@@ -1,0 +1,6 @@
+ros2 run demo_nodes_cpp talker
+
+zenoh-bridge-ros2dds -c ./mnt/config_server.json5
+
+zenoh-bridge-ros2dds -c ./mnt/config_robot_1.json5
+zenoh-bridge-ros2dds -c ./mnt/config_robot_2.json5
