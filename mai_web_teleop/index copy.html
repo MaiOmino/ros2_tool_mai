@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ROS2 Zenoh Web Controller</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; }
+        .controller { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 200px; margin: 20px auto; }
+        .placeholder { grid-column: 2; grid-row: 2; }
+        button { width: 100%; height: 60px; font-size: 24px; border: 2px solid #ccc; border-radius: 8px; user-select: none;}
+        button:active { background-color: #aaffaa; }
+        #status { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>ROS2 Zenoh Web Controller</h1>
+    <div id="status">Connecting...</div>
+    <div class="controller">
+        <div style="grid-column: 2; grid-row: 1;">
+            <button id="forward">▲</button>
+        </div>
+        <div style="grid-column: 1; grid-row: 2;">
+            <button id="left">◄</button>
+        </div>
+        <div class="placeholder"></div>
+        <div style="grid-column: 3; grid-row: 2;">
+            <button id="right">►</button>
+        </div>
+        <div style="grid-column: 2; grid-row: 3;">
+            <button id="backward">▼</button>
+        </div>
+    </div>
+    <p>Press and hold the buttons to move the robot.</p>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        // WebサーバーのIPとポートに合わせて変更
+        const ws = new WebSocket(`ws://192.168.1.18:8000/ws`);
+
+        let linear_x = 0;
+        let angular_z = 0;
+        const speed = 0.5; // 直進速度
+        const turn = 1.0;  // 回転速度
+        let intervalId = null;
+
+        ws.onopen = () => {
+            statusDiv.textContent = 'Connected';
+            statusDiv.style.color = 'green';
+            // 100msごとにコマンドを送信するタイマーを設定
+            intervalId = setInterval(sendCommand, 100);
+        };
+
+        ws.onclose = () => {
+            statusDiv.textContent = 'Disconnected';
+            statusDiv.style.color = 'red';
+            if (intervalId) clearInterval(intervalId);
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket Error:', error);
+            statusDiv.textContent = 'Connection Error';
+            statusDiv.style.color = 'red';
+        };
+
+        function sendCommand() {
+            if (ws.readyState !== WebSocket.OPEN) return;
+
+            const twist = {
+                linear: { x: linear_x, y: 0.0, z: 0.0 },
+                angular: { x: 0.0, y: 0.0, z: angular_z }
+            };
+            ws.send(JSON.stringify(twist));
+        }
+
+        // イベントリスナーを設定する関数
+        function setupButton(buttonId, setLinearX, setAngularZ) {
+            const button = document.getElementById(buttonId);
+            const startMoving = (e) => {
+                e.preventDefault();
+                linear_x = setLinearX;
+                angular_z = setAngularZ;
+            };
+            const stopMoving = (e) => {
+                e.preventDefault();
+                linear_x = 0;
+                angular_z = 0;
+            };
+
+            button.addEventListener('mousedown', startMoving);
+            button.addEventListener('mouseup', stopMoving);
+            button.addEventListener('mouseleave', stopMoving);
+            button.addEventListener('touchstart', startMoving, { passive: false });
+            button.addEventListener('touchend', stopMoving);
+        }
+        
+        setupButton('forward', speed, 0);
+        setupButton('backward', -speed, 0);
+        setupButton('left', 0, turn);
+        setupButton('right', 0, -turn);
+    </script>
+</body>
+</html>

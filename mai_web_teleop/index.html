@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ROS2 Zenoh Web Controller (3D Stick)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard syntax */
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        #status {
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        /* ジョイスティックのコンテナ */
+        #joystick-container {
+            position: relative; /* nipplejsに必須 */
+            width: 200px;
+            height: 200px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 50%;
+        }
+        p {
+            margin-top: 20px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>ROS2 Zenoh Web Controller</h1>
+    <div id="status">Connecting...</div>
+
+    <div id="joystick-container"></div>
+
+    <p>Drag the stick to move the robot.</p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+    <script>
+        const statusDiv = document.getElementById('status');
+        // WebサーバーのIPとポートに合わせて変更
+        const ws = new WebSocket(`ws://192.168.1.18:8000/ws`);
+
+        let linear_x = 0;
+        let angular_z = 0;
+        const speed = 0.5; // 最大直進速度
+        const turn = 1.0;  // 最大回転速度
+        let intervalId = null;
+
+        ws.onopen = () => {
+            statusDiv.textContent = 'Connected';
+            statusDiv.style.color = 'green';
+            // 100msごとにコマンドを送信するタイマーを設定
+            intervalId = setInterval(sendCommand, 100);
+            // ジョイスティックをセットアップ
+            setupJoystick();
+        };
+
+        ws.onclose = () => {
+            statusDiv.textContent = 'Disconnected';
+            statusDiv.style.color = 'red';
+            if (intervalId) clearInterval(intervalId);
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket Error:', error);
+            statusDiv.textContent = 'Connection Error';
+            statusDiv.style.color = 'red';
+        };
+
+        function sendCommand() {
+            if (ws.readyState !== WebSocket.OPEN) return;
+
+            const twist = {
+                linear: { x: linear_x, y: 0.0, z: 0.0 },
+                angular: { x: 0.0, y: 0.0, z: angular_z }
+            };
+            ws.send(JSON.stringify(twist));
+        }
+
+        // ジョイスティックをセットアップする関数
+        function setupJoystick() {
+            const joystickContainer = document.getElementById('joystick-container');
+            const options = {
+                zone: joystickContainer, // ジョイスティックが動作するDOM要素
+                mode: 'static',          // 'static'は中央に固定
+                position: { left: '50%', top: '50%' }, // コンテナの中央に配置
+                color: '#4285F4',      // スティックの色
+                size: 150,               // ジョイスティックのサイズ
+                threshold: 0.1,          // どのくらい動かしたら反応するかの閾値
+                fadeTime: 250            // 元の位置に戻るアニメーション時間
+            };
+
+            const manager = nipplejs.create(options);
+
+            // スティックが動いた時のイベント
+            manager.on('move', (evt, data) => {
+                if (!data.vector) {
+                    return;
+                }
+                // data.vector.yは上がマイナス、下がプラスなので反転させる
+                // スティックの移動量(-1.0 ~ 1.0)に最大速度を掛ける
+                linear_x = data.vector.y * speed;
+
+                // data.vector.xは右がプラス。ROSの角速度は反時計回りが正なので反転させる
+                angular_z = -data.vector.x * turn;
+            });
+
+            // スティックを離した時のイベント
+            manager.on('end', () => {
+                // ロボットを停止させる
+                linear_x = 0;
+                angular_z = 0;
+            });
+        }
+    </script>
+</body>
+</html>
