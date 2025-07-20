@@ -1,0 +1,14 @@
+services:
+  fluentd:
+    image: fluent/fluentd:v1.16-1
+    container_name: fluentd_server
+    ports:
+      # Fluent Bitからのログ受信ポート
+      - "24225:24225"
+      - "24225:24225/udp"
+    volumes:
+      # 設定ファイルの読み込み
+      - ./fluentd:/fluentd/etc
+      # ログファイルの永続化
+      - ./logs:/fluentd/log
+    restart: always

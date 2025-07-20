@@ -1,0 +1,31 @@
+services:
+  # ROS 2 ナビゲーションアプリケーションのコンテナ
+  ros2_nav:
+    # ここにはご自身のROS 2ナビゲーションアプリのイメージを指定してください
+    image: husarion/navigation2:humble-1.1.16-20240927
+    container_name: ros2_nav_app
+    #network_mode: "host"
+    command: ["ros2", "launch", "nav2_bringup", "navigation_launch.py"]
+    #restart: always
+    # Dockerのログ機能をFluentd(Fluent Bit)に転送する設定
+    logging:
+      driver: "fluentd"
+      options:
+        # 転送先は同じホストで起動するFluent Bit
+        fluentd-address: localhost:24224
+        # ログに "ros.nav" というタグを付ける
+        tag: "ros.nav.{{.Name}}"
+    depends_on:
+      - fluent-bit
+  
+  # ログを収集・転送するFluent Bitコンテナ
+  fluent-bit:
+    image: fluent/fluent-bit:2.1
+    container_name: fluent_bit_agent
+    ports:
+      # ros2_navコンテナからログを受け取るためのポート
+      - "24224:24224"
+    volumes:
+      # 設定ファイルの読み込み
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+    restart: always
