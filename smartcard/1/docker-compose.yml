@@ -1,0 +1,8 @@
+services:
+  pcscd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pcscd_container_nonroot
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb:rwm"

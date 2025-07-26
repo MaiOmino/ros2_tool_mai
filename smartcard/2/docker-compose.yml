@@ -1,0 +1,8 @@
+services:
+  pcscd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pcscd_container_nonroot2
+    volumes:
+      - /run/pcscd:/run/pcscd
